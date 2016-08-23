@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  .comment .comment{
+    padding-left:50px;
+  }
+  .comment{
+    margin-bottom: 20px;
+    
+  }
+
+  .controls:after{
+    display: table;
+    content: '';
+    width: 100%;
+  }
+  .controls{
+    width: 400px;
+    position: relative;
+  }
+  textarea{
+    width: 100%;
+  }
+  button{
+    width: 100px;
+    float: right;
+  }
+</style>
+</head>
+
+<body ng-app="app">
+  <script type="text/ng-template" id="comments">
+    <div>
+      <span>{{item.text}}</span>
+      <div class="controls">
+        <textarea ng-model="item.newComment" rows="3" placeholder="reply"></textarea>
+        <button ng-click="addComment(item, item.comments)">Add</button>
+        <button ng-click="removeComment(item)">Remove</button>
+      </div>
+      <div ng-repeat="item in item.comments track by $index" ng-include="'comments'" class="comment"></div>
+    </div>
+  </script>
+
+
+  <div ng-controller="CommentsController">
+    <article>
+    <h1>Header</h1>
+    <p>Lorem ipsum</p>
+    <p>Lorem ipsum</p>
+    <p>Lorem ipsum</p>
+    <h2>Comments:</h2>
+    </article>
+    <div ng-repeat="item in comments track by $index" ng-include="'comments'" class="comment"></div>
+    <div class="controls">
+      <textarea ng-model="item.newComment" rows="3" placeholder="comment"></textarea>
+      <button ng-click="addComment(item,comments)">Add</button>
+    </div>
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+  <script type="text/javascript">
+    angular.module('app',[])
+
+
+
+    .controller('CommentsController', ['$scope', 'CommentsStorage', function($scope, CommentsStorage){
+
+      $scope.comments = CommentsStorage.get()
+      
+      $scope.addComment = function(item,comments){
+        comments.push({
+          id:Math.random().toString(36).substring(7),
+          text:item.newComment,
+          comments:[]
+        })
+        delete(item.newComment)
+        CommentsStorage.save($scope.comments);
+      }
+
+      $scope.removeComment = function(item){
+        CommentsStorage.removeById(item.id)
+        $scope.comments = CommentsStorage.get()
+      }
+    }])
+
+
+
+
+    .service('CommentsStorage', [function(){
+
+      this.save = function(data){
+        localStorage.setItem('comments', JSON.stringify(data))
+        return this;
+      }
+
+      this.removeById = function(id){
+        var comments = [] 
+        this.get().map(function(item){
+          return findNkill(item,id);
+        }).forEach(function(item){
+          if(item) comments.push(item)
+        });
+        return this.save(comments);
+      }
+
+      function findNkill(item,id){
+        if(item.id == id) return undefined;
+        for(var i = 0; i < item.comments.length;i++){
+          if(item.comments[i].id == id){
+            item.comments.splice(i,1);
+            return item;
+          }
+          item.comments = item.comments.map(function(item){
+            return findNkill(item,id);
+          })
+          return item
+        }
+      }
+
+      this.get = function(){
+        var comments = []
+        try{
+          comments = JSON.parse(localStorage.getItem('comments')) || [];
+        }catch(e){
+          console.log(e)
+        }
+        return comments
+      }
+
+
+      return this;
+
+    }])
+
+  </script>
+</body>
+</html>
